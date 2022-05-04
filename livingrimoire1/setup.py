@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name = 'livingrimoire',
-    packages = ['livingrimoire1'],
+    packages = ['livingrimoire'],
     version = '1',  # Ideally should be same as your GitHub release tag varsion
     description = 'AGI software design pattern',
     author = 'moti barski',
