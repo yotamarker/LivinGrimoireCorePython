@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "livingrimoire"
-authors = [name = "Moti Barski", email = "bob@pybit.es"]
+authors = [{name = "Moti Barski", email = "lskdjf@slkdjflksjdfhello.hey"}]
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = ["License :copy rights : Moti Barski"]
