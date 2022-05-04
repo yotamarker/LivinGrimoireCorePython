@@ -1,8 +1,0 @@
-*********
-*CREDITS*
-*********
-
-the living grimoire was created by Moti Barski
-
-Translation of code from java to python : Marco Vavassori (Vavuz), Moti Barski
-Translation of code from java to kotlin : Moti Barski
