@@ -1,0 +1,29 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "livingrimoire"
+authors = [name = "Moti Barski", email = "bob@pybit.es"]
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = ["License :copy rights : Moti Barski"]
+dynamic = ["1.0.0", "prime"]
+dependencies = []
+
+[tool.flit.module]
+name = "carbon"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "mypy",
+    "flake8",
+]
+
+[project.urls]
+Documentation = "https://jizz.is/"
+Source = "https://github.com/yotamarker/LivinGrimoireCorePython"
+
+[project.scripts]
+carbon = "carbon.__main__:main"
