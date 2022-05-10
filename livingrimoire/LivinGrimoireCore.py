@@ -14,6 +14,12 @@ the living grimoire was created by Moti Barski
 
 Translation of code from java to python : Marco Vavassori, Moti Barski"""
 
+# to import to main :
+# add this file, and on the main.py add:
+# from LivinGrimoireCore import *
+# more info at :
+# https://github.com/yotamarker/public-livinGrimoire
+
 
 class AbsDictionaryDB(ABC):
     @abstractmethod
