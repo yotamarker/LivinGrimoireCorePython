@@ -119,7 +119,11 @@ class TrgTolerance(TrGEV3):
     # this boolean gate will return true till depletion or reset()
     def __init__(self, maxrepeats: int):
         self._maxrepeats: int = maxrepeats
-        self._repeates: int = maxrepeats
+        self._repeates: int = 0
+
+    def setMaxRepeats(self, maxRepeats: int):
+        self._maxrepeats = maxRepeats
+        self.reset()
 
     def reset(self):
         # refill trigger
@@ -127,8 +131,8 @@ class TrgTolerance(TrGEV3):
 
     def trigger(self) -> bool:
         # will return true till depletion or reset()
+        self._repeates -= 1
         if self._repeates > 0:
-            self._repeates -= 1
             return True
         return False
 
@@ -248,6 +252,12 @@ class UniqueItemSizeLimitedPriorityQueue(UniqueItemsPriorityQue):
         super().__init__()
         self._limit = limit
 
+    def getLimit(self) -> int:
+        return self._limit
+
+    def setLimit(self, limit: int):
+        self._limit = limit
+
     # override
     def insert(self, data):
         if super().size() == self._limit:
@@ -268,6 +278,9 @@ class UniqueItemSizeLimitedPriorityQueue(UniqueItemsPriorityQue):
         if temp is None:
             return ""
         return temp
+
+    def getAsList(self) -> list[str]:
+        return self.queue
 
 
 class AXLearnability:
@@ -315,7 +328,10 @@ class AXLearnability:
         // recommend alg mutation'''
         if self.defcons.contains(input):
             self._algSent = False
-            return self.trgTolerance.trigger()
+            mutate: bool = not self.trgTolerance.trigger()
+            if mutate:
+                self.trgTolerance.reset()
+            return mutate
         # ^ negative result, mutate the alg if this occures too much
         return False
 
@@ -496,14 +512,24 @@ class Cycler:
     def reset(self):
         self._cycler = self.limit
 
+    def setToZero(self):
+        self._cycler = 0
+
+    def sync(self, n: int):
+        if n < -1 or n > self.limit:
+            return
+        self._cycler = n
+
 
 class DrawRnd:
     # draw a random element, than take said element out
     def __init__(self, *values: str):
         self.converter: LGTypeConverter = LGTypeConverter()
         self.strings: LGFIFO = LGFIFO()
+        self._stringsSource: list[str] = []
         for i in range(0, len(values)):
             self.strings.insert(values[i])
+            self._stringsSource.append(values[i])
 
     def drawAndRemove(self) -> str:
         temp: str = self.strings.getRNDElement()
@@ -517,8 +543,13 @@ class DrawRnd:
         self.strings.removeItem(temp)
         return self.converter.convertToInt(temp)
 
-    def getSimpleRNDNum(self: int) -> int:
-        return random.randint(0, self)
+    def getSimpleRNDNum(self, lim: int) -> int:
+        return random.randint(0, lim)
+
+    def reset(self):
+        self.strings.clear()
+        for t in self._stringsSource:
+            self.strings.insert(t)
 
 
 class Responder:
@@ -644,6 +675,10 @@ class InputFilter:
     def input(self, ear: str, skin: str, eye: str) -> str:
         # override me
         pass
+
+    def filter(self, ear: str) -> AXKeyValuePair:
+        # override me : key = context/category, value: param
+        return AXKeyValuePair()
 
 
 class Map:
@@ -912,3 +947,363 @@ class TrgTime:
         if now != self._t:
             self._alarm = True
         return False
+
+
+class AXGamification:
+    # this auxiliary module can add fun to tasks, skills, and abilities simply by
+    # tracking their usage, and maximum use count.
+    def __init__(self):
+        self._counter: int = 0
+        self._max: int = 0
+
+    def getCounter(self) -> int:
+        return self._counter
+
+    def getMax(self) -> int:
+        return self._max
+
+    def resetCount(self):
+        self._counter = 0
+
+    def resetAll(self):
+        self._counter = 0
+        self._max = 0
+
+    def increment(self):
+        self._counter += 1
+        if self._counter > self._max:
+            self._max = self._counter
+
+
+class AXKeyValuePair:
+    def __init__(self):
+        self.key: str = ""
+        self.value: str = ""
+
+
+class LGTypeConverter:
+    # converts strings types to number typed variables
+    def __init__(self):
+        self.r1: RegexUtil = RegexUtil()
+
+    def convertToInt(self, v1: str) -> int:
+        temp: str = self.r1.extractEnumRegex(enumRegexGrimoire.integer, v1)
+        if temp == "":
+            return 0
+        return int(temp)
+
+    def convertToFloat(self, v1: str) -> int:
+        temp: str = self.r1.extractEnumRegex(enumRegexGrimoire.double_num, v1)
+        if temp == "":
+            return 0
+        return float(temp)
+
+    def convertToFloat(self, v1: str, precision: int) -> int:
+        # precision: how many numbers after the .
+        temp: str = self.r1.extractEnumRegex(enumRegexGrimoire.double_num, v1)
+        if temp == "":
+            return 0
+        return round(float(temp), precision)
+
+
+class TODOListManager:
+    '''manages to do tasks.
+    q1 tasks are mentioned once, and forgotten
+    backup tasks are the memory of recently mentioned tasks'''
+
+    def __init__(self, todoLim: int):
+        self._q1: UniqueItemSizeLimitedPriorityQueue = UniqueItemSizeLimitedPriorityQueue(todoLim)
+        self._backup: UniqueItemSizeLimitedPriorityQueue = UniqueItemSizeLimitedPriorityQueue(todoLim)
+
+    def addTask(self, e1: str):
+        self._q1.insert(e1)
+
+    def getTask(self) -> str:
+        temp: str = self._q1.poll()
+        if not temp == "":
+            self._backup.insert(temp)
+        return temp
+
+    def getOldTask(self):
+        # task graveyard (tasks you've tackled already)
+        return self._backup.getRNDElement()
+
+    def clearAllTasks(self):
+        self._q1.clear()
+        self._backup.clear()
+
+    def clearTask(self, task: str):
+        self._q1.removeItem(task)
+        self._backup.removeItem(task)
+
+
+class AXNeuroSama:
+    def __init__(self, rate: int):
+        # the higher the rate the less likely to decorate outputs
+        self._rate: int = rate
+        self._nyaa: Responder = Responder(" heart", " heart", " wink", " heart heart heart")
+        self._rnd: DrawRnd = DrawRnd()
+
+    def decorate(self, output: str):
+        if output == "":
+            return output
+        if self._rnd.getSimpleRNDNum(self._rate) == 0:
+            return output + self._nyaa.getAResponse()
+        return output
+
+
+class AXLHousing:
+    def decorate(self, str1: str) -> str:
+        # override me
+        return ""
+
+
+class AXLNeuroSama(AXLHousing):
+    def __init__(self):
+        super().__init__()
+        self._nyaa: AXNeuroSama = AXNeuroSama(3)
+
+    def decorate(self, str1: str) -> str:
+        return self._nyaa.decorate(str1)
+
+
+class AXLHub:
+    # hubs many reply decorators, language translators, encriptors and other string modifiers
+    # decorate(str) to decorate string using the active string decorator
+    def __init__(self, *nyaa: AXLHousing):
+        self._nyaa: list[AXLHousing] = []
+        size: int = len(nyaa)
+        for i in range(0, size):
+            self._nyaa.append(nyaa[i])
+        self._cycler: Cycler = Cycler(size - 1)
+        self._cycler.setToZero()
+        self._drawRnd: DrawRnd = DrawRnd()
+        self._activeNyaa = 0
+
+    def decorate(self, str1: str) -> str:
+        return self._nyaa[self._activeNyaa].decorate(str1)
+
+    def cycleDecoration(self):
+        self._activeNyaa = self._cycler.cycleCount()
+
+    def randomizeDecoration(self):
+        self._activeNyaa = self._drawRnd.getSimpleRNDNum(len(self._nyaa))
+
+    def modeDecoration(self, mode: int):
+        if mode < -1 or mode >= len(self._nyaa):
+            return
+        self._activeNyaa = mode
+
+
+class OutputDripper(Cycler):
+    # drips true once every limit times
+    # shushes the waifubot enough time to hear a reply from user
+    def __init__(self, limit: int):
+        # set limit to 1 for on off effect
+        super().__init__(limit)
+
+    def drip(self) -> bool:
+        return self.cycleCount() == 0
+
+    def setLimit(self, lim: int):
+        self.limit = lim
+
+
+class PerChance:
+    '''extend me and add sentences and lists for parameters in the sentences in the
+   sub classes c'tor.
+   replicate speech paterns, generate movie scripts or books and enjoy'''
+
+    def __init__(self):
+        self.sentences: list[str] = []
+        self.wordToList: dict[str, UniqueItemSizeLimitedPriorityQueue] = {}
+        self.regexUtil: RegexUtil = RegexUtil()
+
+    def _clearRecursion(self, result: str) -> str:
+        while "#" in result:
+            t: str = self.regexUtil.extractRegex("(\\w+)(?= #)", result)
+            temp: UniqueItemSizeLimitedPriorityQueue = self.wordToList[t]
+            s1 = temp.getRNDElement()
+            result = result.replace(t + " #", s1)
+        return result
+
+    def generateJoke(self) -> str:
+        # select random element in arraylist code example:
+        result: str = random.choice(self.sentences)
+        return self._clearRecursion(result)
+
+    def addParam(self, category: str, value: str):
+        if category in self.wordToList:
+            self.wordToList[category].insert(value)
+
+    def addParam(self, kv: AXKeyValuePair):
+        if kv.key in self.wordToList:
+            self.wordToList[kv.key].insert(kv.value)
+
+
+class PerChanceTest(PerChance):
+    # example test class for perchance chatbot
+    def __init__(self):
+        super().__init__()
+        self.sentences.append("here is a  salad vegi1 #, vegi2 # and herb #.")
+        self.sentences.append("how about this salad vegi1 #, vegi2 # and herb #. it goes well with tuna fish")
+        temp: UniqueItemSizeLimitedPriorityQueue = UniqueItemSizeLimitedPriorityQueue(3)
+        temp.insert("tomato")
+        temp.insert("sherry tomato")
+        temp.insert("pickle")
+        self.wordToList["vegi1"] = temp
+        temp = UniqueItemSizeLimitedPriorityQueue(3)
+        temp.insert("carrot")
+        temp.insert("onion")
+        temp.insert("radish")
+        self.wordToList["vegi2"] = temp
+        temp = UniqueItemSizeLimitedPriorityQueue(3)
+        temp.insert("dill")
+        temp.insert("parcely")
+        temp.insert("coriander")
+        self.wordToList["herb"] = temp
+
+
+class Strategy:
+    def __init__(self, allStrategies: DrawRnd, strategiesLim: int):
+        # bank of all strategies. out of this pool active strategies are pulled
+        self._allStrategies: DrawRnd = allStrategies
+        self._strategiesLim = strategiesLim
+        # active strategic options
+        self._activeStrategy: UniqueItemSizeLimitedPriorityQueue = UniqueItemSizeLimitedPriorityQueue(strategiesLim)
+
+    def evolveStrategies(self):
+        # add N strategic options to the active strategies bank, from the total strategy bank
+        temp: str = self._allStrategies.drawAndRemove()
+        for i in range(0, self._strategiesLim):
+            if temp == "":
+                break
+            self._activeStrategy.insert(temp)
+            temp = self._allStrategies.drawAndRemove()
+        self._allStrategies.reset()
+
+    def getStrategy(self) -> str:
+        return self._activeStrategy.getRNDElement()
+
+
+class AXStrategy:
+    '''this auxiliary module is used to output strategies based on context
+        can be used for battles, and games
+        upon pain/lose use the evolve methode to update to different new active strategies
+        check for battle state end externaly (opponent state/hits on rival counter)
+    a dictionary of strategies'''
+
+    def __init__(self):
+        self.strategies: dict[str, Strategy] = {}
+
+    def addStrategy(self, context: str, techniques: DrawRnd, lim: int):
+        # add strategies per context
+        # lim is the limit of active strategies, it should be less than
+        # the total strategies in techniques
+        temp: Strategy = Strategy(techniques, lim)
+        self.strategies[context] = temp
+
+    def evolve(self):
+        # replace active strategies
+        key: str = ""
+        for k in self.strategies.keys():
+            self.strategies[k].evolveStrategies()
+
+    def process(self, context: str) -> str:
+        # process input, return action based on game context now
+        if context in self.strategies:
+            return self.strategies[context].getStrategy()
+        return ""
+
+
+class PersistentQuestion:
+    def __init__(self):
+        self._isActive: bool = False
+        self._mode = "yes"  # answer as context for question phrasing
+        self.dic: dict[str, DrawRnd] = {}
+        self._outputDripper: OutputDripper = OutputDripper(1)
+        self.loggedAnswer: str = ""  # only used in log() which replaces process()
+
+    def addPath(self, answer: str, nags: DrawRnd):
+        self.dic[answer] = nags
+
+    def activate(self):
+        self._isActive = True
+
+    def isActive(self):
+        return self._isActive
+
+    def deActivate(self):
+        self._isActive = False
+        self.dic[self._mode].reset()
+
+    def process(self, inp: str) -> str:
+        # got answer?
+        if inp in self.dic:
+            self._mode = inp
+            self._isActive = False
+            self.dic[self._mode].reset()
+            return "okay"  # can extend code to reply key, rnd finalizer
+        # nag for answer
+        if not self._outputDripper.drip():
+            return ""
+        result: str = self.dic[self._mode].drawAndRemove()
+        if not result == "":
+            return result
+        self.dic[self._mode].reset()
+        self._isActive = False
+        return "i see"
+
+    def log(self, inp: str) -> str:
+        # got answer?
+        if inp in self.dic:
+            self._mode = inp
+            self.loggedAnswer = inp
+            self._isActive = False
+            self.dic[self._mode].reset()
+            return "okay"  # can extend code to reply key, rnd finalizer
+        if not inp == "":
+            self.loggedAnswer = inp
+            self._isActive = False
+            self.dic[self._mode].reset()
+            return "okay"  # can extend code to reply key, rnd finalizer
+        # nag for answer
+        if not self._outputDripper.drip():
+            return ""
+        result: str = self.dic[self._mode].drawAndRemove()
+        if not result == "":
+            return result
+        self.dic[self._mode].reset()
+        self._isActive = False
+        return "i see"
+
+    def getMode(self):
+        return self._mode
+
+    def setMode(self, mode: str):
+        if mode in self.dic:
+            self._mode = mode
+
+    def setPause(self):
+        # set pause between question to wait for answer
+        self._outputDripper.setLimit()
+
+
+class Differ:
+    def __init__(self):
+        self._powerLevel = 90
+        self._difference = 0
+
+    def getPowerLevel(self) -> int:
+        return self._powerLevel
+
+    def getPowerLVDifference(self) -> int:
+        return self._difference
+
+    def clearPowerLVDifference(self):
+        self._difference = 0
+
+    def samplePowerLV(self, pl: int):
+        # pl is the current power level
+        self._difference = pl - self._powerLevel
+        self._powerLevel = pl
