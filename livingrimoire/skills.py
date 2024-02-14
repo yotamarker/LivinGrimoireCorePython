@@ -469,6 +469,8 @@ class DiTime(DiSkillV2):
                                     f'{self.__pl.getCurrentMonthDay()} {self.__pl.getCurrentMonthName()} {self.__pl.getYearAsInt()}')
             case "what is the time":
                 self.setVerbatimAlg(4, self.__pl.getCurrentTimeStamp())
+            case "i am sleepy":
+                self.setSimpleAlg("“Chi… Chi knows it’s late. Sleep, sleep is good. When you sleep, you can dream. Dreams, dreams are nice. Tomorrow, lots to do. If sleep now, can do best tomorrow. So, let’s sleep. Good night… zzz…”")
             case "which day is it":
                 self.setVerbatimAlg(4, self.__pl.getDayOfDWeek())
             case "good morning", "good night", "good afternoon", "good evening":
@@ -544,6 +546,8 @@ class DiTime(DiSkillV2):
             case "incantation 0":
                 self.setVerbatimAlg(5, "fly", "bless of magic caster", "infinity wall", "magic ward holy",
                                     "life essence")
+            case "evil laugh":
+                self.setSimpleAlg("bwahaha mwahaha")
 
 
 class DiCron(DiSkillV2):
